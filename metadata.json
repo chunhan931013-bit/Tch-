@@ -1,0 +1,5 @@
+{
+  "name": "Clinical Companion: Medical Calculators",
+  "description": "A comprehensive suite of essential medical calculators for healthcare professionals. This tool provides quick and accurate calculations for BMI, BSA, cardiac functions (LVEF, Cardiac Index), renal function (CrCl, eGFR), hemodynamic pressures (RAP, mPAP), nutritional needs, and more, all presented in a clean, intuitive, and responsive interface.",
+  "requestFramePermissions": []
+}
