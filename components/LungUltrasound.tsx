@@ -109,17 +109,17 @@ export const LungUltrasound: React.FC = () => {
         let findings = [];
         
         // Lung Parenchyma Interpretation
-        const bLineZones = Object.values(zones).filter(z => z.bLine).length;
+        const bLineZones = (Object.values(zones) as ZoneState[]).filter(z => z.bLine).length;
         if (bLineZones >= 2) {
             findings.push('Multiple B-lines suggest interstitial syndrome (e.g., pulmonary edema, pneumonitis, ARDS).');
         }
 
-        const consolidationZones = Object.values(zones).filter(z => z.shred).length;
+        const consolidationZones = (Object.values(zones) as ZoneState[]).filter(z => z.shred).length;
         if (consolidationZones > 0) {
             findings.push('Shred sign indicates lung consolidation.');
         }
 
-        const pneumothoraxSuspectZones = Object.values(zones).filter(z => !z.sliding).length;
+        const pneumothoraxSuspectZones = (Object.values(zones) as ZoneState[]).filter(z => !z.sliding).length;
         if (pneumothoraxSuspectZones > 0) {
             findings.push('Absent lung sliding is suspicious for pneumothorax. Confirmation with a "lung point" is recommended.');
         }

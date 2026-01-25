@@ -6,6 +6,7 @@ import { HemoCalculators } from './components/HemoCalculators';
 import { RenalCalculator } from './components/RenalCalculator';
 import { EspenCalculator } from './components/EspenCalculator';
 import { LungUltrasound } from './components/LungUltrasound';
+import { VasopressorCalculator } from './components/VasopressorCalculator';
 import { Sidebar } from './components/Sidebar';
 import { SunIcon, MoonIcon, MenuIcon, TrashIcon } from './components/Icons';
 import { CalculatorCard } from './components/CalculatorCard';
@@ -114,6 +115,7 @@ const App: React.FC = () => {
       case 'calculators':
         return (
           <>
+            <VasopressorCalculator weight={weight} />
             <EchoCalculators bsa={bsa} />
             <RenalCalculator 
               age={age}
