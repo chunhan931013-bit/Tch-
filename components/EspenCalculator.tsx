@@ -43,6 +43,7 @@ const SettingButton: React.FC<{ label: string; isActive: boolean; onClick: () =>
 export const EspenCalculator: React.FC<EspenCalculatorProps> = ({ weight, height, age, gender, ibw, abw, bmi }) => {
     const [patientSetting, setPatientSetting] = useState<PatientSetting>('ambulatory');
     const [activityFactor, setActivityFactor] = useState('1.2');
+    const [targetKcalPerKg, setTargetKcalPerKg] = useState('25');
     
     // ONS Planner State
     const [showOnsPlanner, setShowOnsPlanner] = useState(false);
@@ -50,6 +51,11 @@ export const EspenCalculator: React.FC<EspenCalculatorProps> = ({ weight, height
     const [fluidRestriction, setFluidRestriction] = useState<FluidRestriction>('none');
     const [selectedProductKey, setSelectedProductKey] = useState('');
     const [feedingsPerDay, setFeedingsPerDay] = useState('6');
+
+    useEffect(() => {
+        if (patientSetting === 'stable') setTargetKcalPerKg('25');
+        if (patientSetting === 'critical') setTargetKcalPerKg('20');
+    }, [patientSetting]);
 
     const caloricNeeds = useMemo(() => {
         const wt = parseFloat(weight);
@@ -64,22 +70,18 @@ export const EspenCalculator: React.FC<EspenCalculatorProps> = ({ weight, height
             weightSource = 'Adjusted Body Weight';
         }
 
-        if (patientSetting === 'stable') {
-            if (weightToUse > 0) {
-                const lower = 25 * weightToUse;
-                const upper = 30 * weightToUse;
-                return { needs: `${lower.toFixed(0)} - ${upper.toFixed(0)}`, formula: `25-30 kcal/kg/day (using ${weightSource})`, target: lower };
-            }
-            return { needs: '-', formula: '25-30 kcal/kg/day', target: 0 };
-        }
-
-        if (patientSetting === 'critical') {
-            if (weightToUse > 0) {
-                const lower = 20 * weightToUse;
-                const upper = 25 * weightToUse;
-                return { needs: `${lower.toFixed(0)} - ${upper.toFixed(0)}`, formula: `20-25 kcal/kg/day (acute, using ${weightSource})`, target: lower };
-            }
-             return { needs: '-', formula: '20-25 kcal/kg/day (acute phase)', target: 0 };
+        if (patientSetting === 'stable' || patientSetting === 'critical') {
+             if (weightToUse > 0) {
+                 const factor = parseFloat(targetKcalPerKg) || 0;
+                 const total = factor * weightToUse;
+                 return { 
+                     type: 'hospitalized',
+                     total: total.toFixed(0), 
+                     formula: `${factor} kcal/kg/day * ${weightToUse.toFixed(1)} kg (${weightSource})`, 
+                     target: total
+                 };
+             }
+             return { type: 'hospitalized', total: '-', formula: 'Missing Weight', target: 0 };
         }
         
         // Ambulatory logic (Harris-Benedict)
@@ -95,12 +97,12 @@ export const EspenCalculator: React.FC<EspenCalculatorProps> = ({ weight, height
                 bmr = 447.593 + (9.247 * wt) + (3.098 * ht) - (4.330 * ageNum);
             }
             const tdee = bmr * factor;
-            return { bmr: bmr.toFixed(0), tdee: tdee.toFixed(0), target: tdee };
+            return { type: 'ambulatory', bmr: bmr.toFixed(0), tdee: tdee.toFixed(0), target: tdee };
         }
 
-        return { bmr: '-', tdee: '-', target: 0 };
+        return { type: 'ambulatory', bmr: '-', tdee: '-', target: 0 };
 
-    }, [weight, height, age, gender, activityFactor, patientSetting, bmi, abw]);
+    }, [weight, height, age, gender, activityFactor, patientSetting, bmi, abw, targetKcalPerKg]);
 
     const onsProducts = useMemo(() => {
         if (fluidRestriction !== 'none') {
@@ -121,7 +123,7 @@ export const EspenCalculator: React.FC<EspenCalculatorProps> = ({ weight, height
     }, [onsProducts]);
 
     const onsPlan = useMemo(() => {
-        const target = (caloricNeeds as any).tdee ? parseFloat((caloricNeeds as any).tdee) : (caloricNeeds as any).target;
+        const target = caloricNeeds.target;
         const product = ONS_PRODUCTS[selectedProductKey as keyof typeof ONS_PRODUCTS];
         const feedings = parseInt(feedingsPerDay, 10);
 
@@ -133,18 +135,16 @@ export const EspenCalculator: React.FC<EspenCalculatorProps> = ({ weight, height
         const amountPerFeeding = kcalPerFeeding / product.kcal;
         const totalAmount = amountPerFeeding * feedings;
         const totalProtein = totalAmount * product.protein;
+        const totalCalories = totalAmount * product.kcal;
 
         return {
             amountPerFeeding: amountPerFeeding.toFixed(1),
             totalAmount: totalAmount.toFixed(1),
             totalProtein: totalProtein.toFixed(1),
+            totalCalories: totalCalories.toFixed(0),
             unit: product.unit,
         };
     }, [caloricNeeds, selectedProductKey, feedingsPerDay]);
-
-    // Type guards
-    const isAmbulatory = (needs: any): needs is { bmr: string, tdee: string } => patientSetting === 'ambulatory';
-    const isHospitalized = (needs: any): needs is { needs: string, formula: string } => patientSetting === 'stable' || patientSetting === 'critical';
 
     return (
         <CollapsibleCard title="ESPEN Caloric Needs" icon={<NutritionIcon />}>
@@ -170,17 +170,33 @@ export const EspenCalculator: React.FC<EspenCalculatorProps> = ({ weight, height
                         ]} />
                 </div>
             )}
+
+            {(patientSetting === 'stable' || patientSetting === 'critical') && (
+                 <div className="animate-fade-in mb-4">
+                     <FormField 
+                        label="Target Caloric Intake" 
+                        id="target_kcal_kg" 
+                        value={targetKcalPerKg} 
+                        onChange={e => setTargetKcalPerKg(e.target.value)} 
+                        unit="kcal/kg/day"
+                        type="number"
+                     />
+                     <p className="text-xs text-gray-500 dark:text-gray-400 -mt-3 mb-2">
+                        Recommended: {patientSetting === 'stable' ? '25 - 30' : '20 - 25'} kcal/kg/day
+                     </p>
+                </div>
+            )}
             
             <div className="mt-4">
-                {isAmbulatory(caloricNeeds) && (
+                {caloricNeeds.type === 'ambulatory' && (
                     <div className="animate-fade-in space-y-2">
-                        <ResultDisplay label="BMR" value={caloricNeeds.bmr} unit="kcal/day" formula="Harris-Benedict Equation" />
-                        <ResultDisplay label="Est. Caloric Needs" value={caloricNeeds.tdee} unit="kcal/day" formula="BMR x Activity Factor" />
+                        <ResultDisplay label="BMR" value={(caloricNeeds as any).bmr} unit="kcal/day" formula="Harris-Benedict Equation" />
+                        <ResultDisplay label="Est. Caloric Needs" value={(caloricNeeds as any).tdee} unit="kcal/day" formula="BMR x Activity Factor" />
                     </div>
                 )}
-                 {isHospitalized(caloricNeeds) && (
+                 {caloricNeeds.type === 'hospitalized' && (
                      <div className="animate-fade-in">
-                        <ResultDisplay label="Est. Caloric Needs" value={caloricNeeds.needs} unit="kcal/day" formula={caloricNeeds.formula} />
+                        <ResultDisplay label="Est. Caloric Needs" value={(caloricNeeds as any).total} unit="kcal/day" formula={(caloricNeeds as any).formula} />
                     </div>
                 )}
             </div>
@@ -224,6 +240,7 @@ export const EspenCalculator: React.FC<EspenCalculatorProps> = ({ weight, height
                              <ResultDisplay label="Amount per Feeding" value={`${onsPlan.amountPerFeeding}`} unit={onsPlan.unit} />
                              <ResultDisplay label="Total Daily Amount" value={`${onsPlan.totalAmount}`} unit={onsPlan.unit} />
                              <ResultDisplay label="Total Daily Protein" value={onsPlan.totalProtein} unit="g" />
+                             <ResultDisplay label="Total Calories Provided" value={onsPlan.totalCalories} unit="kcal" />
                         </div>
                     )}
                 </div>
