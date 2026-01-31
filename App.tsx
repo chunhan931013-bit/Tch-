@@ -7,6 +7,7 @@ import { RenalCalculator } from './components/RenalCalculator';
 import { EspenCalculator } from './components/EspenCalculator';
 import { LungUltrasound } from './components/LungUltrasound';
 import { VasopressorCalculator } from './components/VasopressorCalculator';
+import { DayCalculator } from './components/DayCalculator';
 import { SunIcon, MoonIcon, TrashIcon } from './components/Icons';
 
 const App: React.FC = () => {
@@ -151,6 +152,7 @@ const App: React.FC = () => {
               />
             </div>
             <div className="w-full lg:w-2/3 xl:w-3/4">
+                <DayCalculator />
                 <VasopressorCalculator weight={weight} />
                 <EchoCalculators bsa={bsa} />
                 <LungUltrasound />
