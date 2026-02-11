@@ -15,7 +15,8 @@ export const DayCalculator: React.FC = () => {
     const [durationDays, setDurationDays] = useState('');
 
     const dayDifference = useMemo(() => {
-        if (!startDate1 || !endDate1) return '-';
+        if (!startDate1 || !endDate1) return { total: '-', breakdown: '' };
+        
         const start = new Date(startDate1);
         const end = new Date(endDate1);
         
@@ -23,9 +24,49 @@ export const DayCalculator: React.FC = () => {
         start.setHours(0, 0, 0, 0);
         end.setHours(0, 0, 0, 0);
         
-        const diffTime = Math.abs(end.getTime() - start.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays.toString();
+        // 1. Total Days Calculation
+        const diffTime = end.getTime() - start.getTime();
+        const totalDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (isNaN(totalDays)) return { total: '-', breakdown: '' };
+
+        // 2. Months and Days Breakdown
+        // We calculate this using calendar months for intuitive reading
+        let d1 = new Date(startDate1);
+        let d2 = new Date(endDate1);
+        
+        // If end is before start, swap for calculation then negate
+        let isNegative = false;
+        if (d1 > d2) {
+            [d1, d2] = [d2, d1];
+            isNegative = true;
+        }
+
+        let months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+        let days = d2.getDate() - d1.getDate();
+
+        if (days < 0) {
+            months--;
+            // Get number of days in the previous month of the end date
+            const prevMonth = new Date(d2.getFullYear(), d2.getMonth(), 0);
+            days += prevMonth.getDate();
+        }
+
+        let breakdownParts = [];
+        if (months > 0) breakdownParts.push(`${months} month${months !== 1 ? 's' : ''}`);
+        if (days > 0) breakdownParts.push(`${days} day${days !== 1 ? 's' : ''}`);
+        
+        let breakdownStr = breakdownParts.join(', ');
+        if (isNegative) {
+            breakdownStr = `Negative duration: ${breakdownStr}`;
+        } else if (breakdownParts.length === 0) {
+            breakdownStr = 'Same day';
+        }
+
+        return { 
+            total: totalDays.toString(), 
+            breakdown: breakdownStr 
+        };
     }, [startDate1, endDate1]);
 
     const calculatedEndDate = useMemo(() => {
@@ -69,7 +110,15 @@ export const DayCalculator: React.FC = () => {
                             type="date" 
                         />
                     </div>
-                    <ResultDisplay label="Total Duration" value={dayDifference} unit="days" />
+                    <div className="space-y-2">
+                        <ResultDisplay label="Total Duration" value={dayDifference.total} unit="days" />
+                        {dayDifference.breakdown && (
+                            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 rounded-r-lg">
+                                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Equivalent to: </span>
+                                <span className="text-sm font-bold text-blue-800 dark:text-blue-200">{dayDifference.breakdown}</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <hr className="border-secondary dark:border-gray-600" />
