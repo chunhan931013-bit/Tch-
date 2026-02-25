@@ -10,25 +10,34 @@ interface RenalCalculatorProps {
     weight: string;
     serumCreatinine: string;
     gender: string;
+    ibw: string;
+    abw: string;
 }
 
-export const RenalCalculator: React.FC<RenalCalculatorProps> = ({ age, weight, serumCreatinine, gender }) => {
+export const RenalCalculator: React.FC<RenalCalculatorProps> = ({ age, weight, serumCreatinine, gender, ibw, abw }) => {
     const [raceEgfr, setRaceEgfr] = useState('non_black');
+    const [weightType, setWeightType] = useState<'actual' | 'ibw' | 'abw'>('actual');
     
     const crcl = useMemo(() => {
         const ageNum = parseFloat(age);
         const wt = parseFloat(weight);
+        const ibwNum = parseFloat(ibw);
+        const abwNum = parseFloat(abw);
         const crUmol = parseFloat(serumCreatinine);
         
-        if (ageNum > 0 && wt > 0 && crUmol > 0) {
+        let weightToUse = wt;
+        if (weightType === 'ibw' && ibwNum > 0) weightToUse = ibwNum;
+        if (weightType === 'abw' && abwNum > 0) weightToUse = abwNum;
+
+        if (ageNum > 0 && weightToUse > 0 && crUmol > 0) {
             // Convert umol/L to mg/dL for the formula (1 mg/dL = 88.4 umol/L)
             const crMgdl = crUmol / 88.4;
             const femaleMultiplier = gender === 'female' ? 0.85 : 1;
-            const result = ((140 - ageNum) * wt * femaleMultiplier) / (72 * crMgdl);
+            const result = ((140 - ageNum) * weightToUse * femaleMultiplier) / (72 * crMgdl);
             return result.toFixed(1);
         }
         return '-';
-    }, [age, weight, serumCreatinine, gender]);
+    }, [age, weight, serumCreatinine, gender, ibw, abw, weightType]);
 
     const egfr = useMemo(() => {
         const ageNum = parseFloat(age);
@@ -65,6 +74,45 @@ export const RenalCalculator: React.FC<RenalCalculatorProps> = ({ age, weight, s
                 Uses data from the "Patient Data" card.
             </p>
             <h3 className="text-lg font-semibold mb-2 text-primary dark:text-blue-400">CrCl (Cockcroft-Gault)</h3>
+            
+            <div className="mb-3">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Weight for Calculation</label>
+                <div className="flex bg-secondary dark:bg-gray-700 p-1 rounded-lg">
+                    <button
+                        onClick={() => setWeightType('actual')}
+                        className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+                            weightType === 'actual' 
+                            ? 'bg-surface-light dark:bg-gray-600 text-primary dark:text-blue-300 shadow-sm' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        Actual
+                    </button>
+                    <button
+                        onClick={() => setWeightType('ibw')}
+                        disabled={ibw === '-'}
+                        className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+                            weightType === 'ibw' 
+                            ? 'bg-surface-light dark:bg-gray-600 text-primary dark:text-blue-300 shadow-sm' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                        }`}
+                    >
+                        IBW
+                    </button>
+                    <button
+                        onClick={() => setWeightType('abw')}
+                        disabled={abw === '-'}
+                        className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+                            weightType === 'abw' 
+                            ? 'bg-surface-light dark:bg-gray-600 text-primary dark:text-blue-300 shadow-sm' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                        }`}
+                    >
+                        AdjBW
+                    </button>
+                </div>
+            </div>
+
             <ResultDisplay label="CrCl" value={crcl} unit="mL/min" />
 
             <hr className="my-4 border-secondary-dark dark:border-gray-600" />

@@ -153,7 +153,7 @@ const App: React.FC = () => {
             </div>
             <div className="w-full lg:w-2/3 xl:w-3/4">
                 <DayCalculator />
-                <VasopressorCalculator weight={weight} />
+                <VasopressorCalculator weight={weight} ibw={ibw} abw={abw} />
                 <EchoCalculators bsa={bsa} />
                 <LungUltrasound />
                 <RenalCalculator 
@@ -161,6 +161,8 @@ const App: React.FC = () => {
                   weight={weight}
                   serumCreatinine={serumCreatinine}
                   gender={gender}
+                  ibw={ibw}
+                  abw={abw}
                 />
                 <HemoCalculators />
                 <EspenCalculator 

@@ -7,25 +7,17 @@ import { SyringeIcon } from './Icons';
 
 interface VasopressorCalculatorProps {
     weight: string;
+    ibw: string;
+    abw: string;
 }
 
-type Drug = 'noradrenaline' | 'adrenaline' | 'vasopressin' | 'dobutamine' | 'dopamine';
-type CalculationMode = 'rate_from_dose' | 'dose_from_rate';
-
-const DRUG_CONFIG: Record<Drug, { label: string; unit: string; doseUnit: string; isWeightBased: boolean }> = {
-    noradrenaline: { label: 'Noradrenaline (Norepinephrine)', unit: 'mg', doseUnit: 'mcg/kg/min', isWeightBased: true },
-    adrenaline: { label: 'Adrenaline (Epinephrine)', unit: 'mg', doseUnit: 'mcg/kg/min', isWeightBased: true },
-    vasopressin: { label: 'Vasopressin', unit: 'Units', doseUnit: 'Units/min', isWeightBased: false },
-    dobutamine: { label: 'Dobutamine', unit: 'mg', doseUnit: 'mcg/kg/min', isWeightBased: true },
-    dopamine: { label: 'Dopamine', unit: 'mg', doseUnit: 'mcg/kg/min', isWeightBased: true },
-};
-
-export const VasopressorCalculator: React.FC<VasopressorCalculatorProps> = ({ weight }) => {
+export const VasopressorCalculator: React.FC<VasopressorCalculatorProps> = ({ weight, ibw, abw }) => {
     const [drug, setDrug] = useState<Drug>('noradrenaline');
     const [amount, setAmount] = useState('');
     const [volume, setVolume] = useState('');
     const [mode, setMode] = useState<CalculationMode>('dose_from_rate');
     const [inputValue, setInputValue] = useState(''); // Stores Rate (ml/hr) or Dose (mcg/kg/min etc)
+    const [weightType, setWeightType] = useState<'actual' | 'ibw' | 'abw'>('actual');
 
     // Derived values
     const config = DRUG_CONFIG[drug];
@@ -53,7 +45,13 @@ export const VasopressorCalculator: React.FC<VasopressorCalculatorProps> = ({ we
     const result = useMemo(() => {
         const val = parseFloat(inputValue);
         const conc = concentrationInfo.value;
-        const ptWeight = parseFloat(weight);
+        const wt = parseFloat(weight);
+        const ibwNum = parseFloat(ibw);
+        const abwNum = parseFloat(abw);
+        
+        let weightToUse = wt;
+        if (weightType === 'ibw' && ibwNum > 0) weightToUse = ibwNum;
+        if (weightType === 'abw' && abwNum > 0) weightToUse = abwNum;
 
         if (val > 0 && conc > 0) {
             if (mode === 'dose_from_rate') {
@@ -61,9 +59,9 @@ export const VasopressorCalculator: React.FC<VasopressorCalculatorProps> = ({ we
                 const rate = val;
                 
                 if (config.isWeightBased) {
-                    if (ptWeight > 0) {
+                    if (weightToUse > 0) {
                         // Rate (ml/hr) * Conc (mcg/ml) / 60 / Weight (kg) = mcg/kg/min
-                        const dose = (rate * conc) / 60 / ptWeight;
+                        const dose = (rate * conc) / 60 / weightToUse;
                         return { value: dose.toFixed(2), unit: config.doseUnit };
                     }
                     return { value: '-', unit: 'Missing Weight' };
@@ -77,9 +75,9 @@ export const VasopressorCalculator: React.FC<VasopressorCalculatorProps> = ({ we
                 const dose = val;
 
                 if (config.isWeightBased) {
-                    if (ptWeight > 0) {
+                    if (weightToUse > 0) {
                         // Dose (mcg/kg/min) * Weight * 60 / Conc (mcg/ml) = mL/hr
-                        const rate = (dose * ptWeight * 60) / conc;
+                        const rate = (dose * weightToUse * 60) / conc;
                         return { value: rate.toFixed(1), unit: 'mL/hr' };
                     }
                     return { value: '-', unit: 'Missing Weight' };
@@ -91,7 +89,7 @@ export const VasopressorCalculator: React.FC<VasopressorCalculatorProps> = ({ we
             }
         }
         return { value: '-', unit: '' };
-    }, [inputValue, concentrationInfo.value, weight, mode, config]);
+    }, [inputValue, concentrationInfo.value, weight, ibw, abw, weightType, mode, config]);
 
     const handleDrugChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
         setDrug(e.target.value as Drug);
@@ -110,6 +108,46 @@ export const VasopressorCalculator: React.FC<VasopressorCalculatorProps> = ({ we
                     options={Object.entries(DRUG_CONFIG).map(([key, cfg]) => ({ value: key, label: cfg.label }))}
                 />
             </div>
+
+            {config.isWeightBased && (
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Weight for Calculation</label>
+                    <div className="flex bg-secondary dark:bg-gray-700 p-1 rounded-lg">
+                        <button
+                            onClick={() => setWeightType('actual')}
+                            className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+                                weightType === 'actual' 
+                                ? 'bg-surface-light dark:bg-gray-600 text-primary dark:text-blue-300 shadow-sm' 
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                            }`}
+                        >
+                            Actual
+                        </button>
+                        <button
+                            onClick={() => setWeightType('ibw')}
+                            disabled={ibw === '-'}
+                            className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+                                weightType === 'ibw' 
+                                ? 'bg-surface-light dark:bg-gray-600 text-primary dark:text-blue-300 shadow-sm' 
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                            }`}
+                        >
+                            IBW
+                        </button>
+                        <button
+                            onClick={() => setWeightType('abw')}
+                            disabled={abw === '-'}
+                            className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+                                weightType === 'abw' 
+                                ? 'bg-surface-light dark:bg-gray-600 text-primary dark:text-blue-300 shadow-sm' 
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                            }`}
+                        >
+                            AdjBW
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="bg-secondary-light dark:bg-gray-800 p-4 rounded-lg mb-6 border border-secondary dark:border-gray-700">
                 <h3 className="font-semibold text-primary dark:text-blue-400 mb-3 flex items-center">
