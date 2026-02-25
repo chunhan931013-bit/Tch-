@@ -36,7 +36,7 @@ const App: React.FC = () => {
   const [weight, setWeight] = useState('');
   const [age, setAge] = useState('');
   const [serumCreatinine, setSerumCreatinine] = useState('');
-  const [gender, setGender] = useState('male');
+  const [gender, setGender] = useState('');
 
   const { bmi, bsa, interpretation, colorClass, ibw, abw } = useMemo(() => {
     const h = parseFloat(height);
@@ -71,11 +71,11 @@ const App: React.FC = () => {
 
         // Ideal Body Weight (Devine Formula)
         const heightInInches = h / 2.54;
-        if (heightInInches > 60) {
+        if (heightInInches > 60 && g) {
             const inchesOver5Feet = heightInInches - 60;
             if (g === 'male') {
                 ibwValue = 50 + (2.3 * inchesOver5Feet);
-            } else { // female
+            } else if (g === 'female') {
                 ibwValue = 45.5 + (2.3 * inchesOver5Feet);
             }
         }
@@ -102,7 +102,7 @@ const App: React.FC = () => {
     setWeight('');
     setAge('');
     setSerumCreatinine('');
-    setGender('male');
+    setGender('');
     setClearKey(prev => prev + 1);
   };
 

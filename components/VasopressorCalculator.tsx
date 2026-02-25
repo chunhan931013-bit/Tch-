@@ -11,6 +11,17 @@ interface VasopressorCalculatorProps {
     abw: string;
 }
 
+type Drug = 'noradrenaline' | 'adrenaline' | 'vasopressin' | 'dobutamine' | 'dopamine';
+type CalculationMode = 'rate_from_dose' | 'dose_from_rate';
+
+const DRUG_CONFIG: Record<Drug, { label: string; unit: string; doseUnit: string; isWeightBased: boolean }> = {
+    noradrenaline: { label: 'Noradrenaline (Norepinephrine)', unit: 'mg', doseUnit: 'mcg/kg/min', isWeightBased: true },
+    adrenaline: { label: 'Adrenaline (Epinephrine)', unit: 'mg', doseUnit: 'mcg/kg/min', isWeightBased: true },
+    vasopressin: { label: 'Vasopressin', unit: 'Units', doseUnit: 'Units/min', isWeightBased: false },
+    dobutamine: { label: 'Dobutamine', unit: 'mg', doseUnit: 'mcg/kg/min', isWeightBased: true },
+    dopamine: { label: 'Dopamine', unit: 'mg', doseUnit: 'mcg/kg/min', isWeightBased: true },
+};
+
 export const VasopressorCalculator: React.FC<VasopressorCalculatorProps> = ({ weight, ibw, abw }) => {
     const [drug, setDrug] = useState<Drug>('noradrenaline');
     const [amount, setAmount] = useState('');
